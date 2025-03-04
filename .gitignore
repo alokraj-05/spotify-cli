@@ -1,0 +1,8 @@
+/__pycache__
+/dist
+/build
+.env
+.spotify_token.json
+debug.log
+spotifyCli.spec
+/Scripts/__pycache__
