@@ -32,9 +32,20 @@ def play(song_name):
     playback.play(song_name)
 
 
+@click.command()
+@click.argument("link")
+def play_playlist(link):
+    playback.play_playlist(link)
+
+@click.command()
+def pause():
+    playback.pause()
+
 main.add_command(authenticate)
 main.add_command(artist_name)
 main.add_command(play)
+main.add_command(play_playlist)
+main.add_command(pause)
 
 
 if __name__ == "__main__":
