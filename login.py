@@ -9,7 +9,7 @@ load_dotenv()
 CLIENT_ID = os.getenv('CLIENT_ID')
 CLIENT_SECRET = os.getenv('CLIENT_SECRET')
 REDIRECT_URL = os.getenv('REDIRECT_URI')
-SCOPE = "user-read-playback-state user-modify-playback-state"
+SCOPE = "user-read-playback-state user-modify-playback-state user-read-currently-playing playlist-read-private playlist-modify-private playlist-modify-public"
 TOKEN_PATH = ".spotify_token.json"
 
 
