@@ -14,7 +14,7 @@ TOKEN_PATH = ".spotify_token.json"
 
 
 def login():
-  auth_manager = SpotifyOAuth(client_id=CLIENT_ID, client_secret=CLIENT_SECRET,redirect_uri=REDIRECT_URL,scope=SCOPE,cache_path=TOKEN_PATH)
+  auth_manager = SpotifyOAuth(client_id=CLIENT_ID, client_secret=CLIENT_SECRET,redirect_uri=REDIRECT_URL,scope=SCOPE,cache_path=TOKEN_PATH,show_dialog=True)
 
   try:
     if os.path.exists(TOKEN_PATH):
@@ -22,6 +22,7 @@ def login():
         token_info = json.load(file)
     else:
       token_info = auth_manager.get_access_token()
+      print("Token scope",token_info.get('scope','No scope found'))
     
     if token_info is None or auth_manager.is_token_expired(token_info):
       token_info= auth_manager.refresh_access_token(token_info["refresh_token"])
