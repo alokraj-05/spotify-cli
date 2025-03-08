@@ -7,3 +7,4 @@ debug.log
 spotifyCli.spec
 /Scripts/__pycache__
 .cache
+spotify-cli.spec
