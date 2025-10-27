@@ -1,4 +1,9 @@
 import requests
+from filter.fuzzySearch import fuzzy_search
+import os
+import time
+import webbrowser
+from filter.runApp import findNdLaunch
 
 class Playback:
   BASE_URL = "https://api.spotify.com/v1/"
@@ -14,38 +19,116 @@ class Playback:
       return response.json()['id']
     else:
       print(f"❌ failed to get user ID: {response.status_code} {response.text}")
-  def search_track(self,track_name):
-    url = f"{self.BASE_URL}search?q={track_name}&type=track&limit=1"
+
+
+  def search_track(self,track_name, use_fuzzy=True, search_limit=50):
+    """
+    Search Spotify and optionally apply fuzzy matching across the returned items.
+    Returns the chosen track URI or None.
+    """
+    url = f"{self.BASE_URL}search?q={track_name}&type=track&limit={search_limit}"
     response = requests.get(url,headers=self.headers)
     if response.status_code == 200:
         data = response.json()
         tracks = data.get("tracks", {}).get("items", [])
-        if tracks:
-          track_uri = tracks[0]["uri"]
-          track_name = tracks[0]["name"]
-          artist_name = tracks[0]["artists"][0]["name"]
-          print(f"🎶 Found: {track_name} by {artist_name}")
-          return track_uri
-        else:
+        if not tracks:
           print("❌ No track found.")
           return None
+
+        if use_fuzzy and len(tracks) > 1:
+          matches = fuzzy_search(tracks, track_name, top_n=1)
+          if matches:
+            best = matches[0]
+            track_uri = best.get("uri")
+            print(f"🎶 Found (fuzzy): {best.get('name')} by {best.get('artist')} "
+                  f"(pop:{best.get('popularity')} score:{best.get('score')} substr:{best.get('substring')})")
+            return track_uri
+          else:
+            # fallback to first item if fuzzy didn't return anything
+            chosen = tracks[0]
+            track_uri = chosen.get("uri")
+            track_name = chosen.get("name")
+            artist_name = chosen.get("artists", [{}])[0].get("name", "")
+            print(f"🎶 Found: {track_name} by {artist_name}")
+            return track_uri
+        else:
+          # use the top search result directly
+          track = tracks[0]
+          track_uri = track.get("uri")
+          track_name = track.get("name")
+          artist_name = track.get("artists", [{}])[0].get("name", "")
+          print(f"🎶 Found: {track_name} by {artist_name}")
+          return track_uri
     else:
       print(f"❌ Error: {response.status_code} {response.text}")
       return None
+    
+
+  def _open_spotify_app_and_play(self, track_uri):
+    """Try to open the desktop Spotify client and play the given spotify: URI."""
+    try:
+      # Prefer OS-native open on Windows
+      if os.name == 'nt':
+        try:
+          os.startfile(track_uri)  # will open registered spotify: handler
+        except Exception:
+          webbrowser.open(track_uri)
+      else:
+        webbrowser.open(track_uri)
+
+      # Also attempt to launch the Spotify exe if present
+      try:
+        findNdLaunch("Spotify")
+      except Exception:
+        pass
+
+      return True
+    except Exception as e:
+      print(f"❌ Failed to launch Spotify app: {e}")
+      return False
+
   def play(self,song_name):
     self.song_name = song_name
     track_uri = self.search_track(track_name=song_name)
     if not track_uri:
       return
-    
+
     self.play_url = f"{self.BASE_URL}me/player/play"
     data = {"uris":[track_uri]}
-    
+
     response = requests.put(self.play_url,headers=self.headers,json=data)
+    # Success
     if response.status_code == 204:
-      print(f"🎶 Now playing: {song_name}")
-    else:
-      print(f"❌ Failed to play: {song_name}\nreason: {response.status_code} {response.text}")
+      return response
+
+    # If playback failed, check for "device not found" or similar and try opening app
+    msg = ""
+    try:
+      resp_json = response.json()
+      msg = resp_json.get('error', {}).get('message', '') or str(resp_json)
+    except Exception:
+      msg = response.text or ""
+
+    if response.status_code == 404 or 'device' in msg.lower():
+      print("⚠️ No active Spotify device found. Attempting to open native Spotify app and play directly...")
+      opened = self._open_spotify_app_and_play(track_uri)
+      if opened:
+        # give the app a moment to register as an active device
+        time.sleep(3)
+        response = requests.put(self.play_url,headers=self.headers,json=data)
+        if response.status_code == 204:
+          print("✅ Playback started after launching Spotify app.")
+          return response
+        else:
+          print(f"❌ Still failed to start playback after launching app: {response.status_code} {response.text}")
+          return response
+      else:
+        print("❌ Could not open Spotify app to start playback.")
+        return response
+
+    # Other errors
+    print(f"❌ Error: {response.status_code} {response.text}")
+    return response
     
   def pause(self):
     pause_url = f"{self.BASE_URL}me/player/pause"
