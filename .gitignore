@@ -8,3 +8,6 @@ spotifyCli.spec
 /Scripts/__pycache__
 .cache
 spotify-cli.spec
+/out
+.spotify_history
+logo.ico
