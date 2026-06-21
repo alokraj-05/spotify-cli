@@ -5,11 +5,28 @@ from login import login
 from dotenv import load_dotenv
 from filter import runApp as rA
 import time
+import threading
+import queue
+
 load_dotenv()
 access_token = login();
-
+command_queue = queue.Queue()
+bars = 50
 playback = Playback(access_token)
 artist = Artist(access_token)
+
+def listener_thread():
+   while True:
+      try:
+         req = vR.audioRec()
+         if req:
+            command_queue.put(req)
+      except Exception as e:
+         print('Listner error:',e)
+         continue
+
+
+
 def methodToDo(method,req):
   if method == "play":
     res = playback.play(req)
@@ -21,64 +38,61 @@ def methodToDo(method,req):
         return
       else:
         return
-    elif res.status_code == 200:
-      playback.play(req)
-      return
     else:
       return
-  elif method == "pause":
+  elif method == "stop":
     res = playback.pause()
     return
   elif method == "artist":
     res = artist.artist_name(req)
+    return
   else:
+    print(f"Unhandled method: {method}")
     return
   
-def isReady(req):
-    # Handle None/empty input
-    if not req:
-        print("❌ Could not understand audio input")
-        return
-    
-    # Convert to string and normalize
-    activation_word = str(req[0]).lower() if isinstance(req, list) else str(req).lower()
-    
-    # Check for exit command
-    if activation_word == "exit":
-        print("👋 Exiting voice control...")
-        return
-    
-    # Check for activation word
-    if activation_word == "hello":
-        print("🎧 Listening for command...")
-        command = vR.audioRec()
-        
-        # Handle failed command recognition
-        if not command:
-            print("❌ Could not understand command")
-            # Continue listening
-            next_input = vR.audioRec()
-            return isReady(next_input)
-            
-        # Execute the command
-        try:
-            methodToDo(command[0], command[1])
-        except Exception as e:
-            print(f"❌ Error executing command: {e}")
-        
-        # Continue listening
-        print("🎤 Say 'Meow' for new command or 'exit' to quit...")
-        next_input = vR.audioRec()
-        return isReady(next_input)
-    
-    # Not activated, keep listening
-    print("🎤 Say 'Meow' to activate or 'exit' to quit...")
-    next_input = vR.audioRec()
-    return isReady(next_input)
+def isReady():
+    print("🎤 Say 'Hello' for new command or 'exit' to quit...")
+    active = False
+    last_activity = time.time()
+    TIMEOUT = 15
 
-# Update main execution
-print("🎤 Say 'Meow' to activate or 'exit' to quit...")
-initial_input = vR.audioRec()
-print(initial_input)
-isReady(initial_input)
+    while True:
+        try:
+          req = command_queue.get(timeout=0.5)
+        except queue.Empty:
+          if active and (time.time() - last_activity>TIMEOUT):
+            print("💤 Going to sleep...")
+            active = False
+          continue
+        print(req)
+    
+        text = str(req[0]).lower() if isinstance(req, list) else str(req).lower()
+        if text == "exit":
+            print("👋 Exiting voice control...")
+            break
+          
+        if not active: 
+          if text == "hello":
+              print("🟢 Activated. Listening for command...")
+              active = True
+              last_activity = time.time()
+          else:
+              print("Sleeping... Say 'Hello' to wake me.")
+          continue
+        last_activity = time.time()
+        if isinstance(req, list) and len(req) >= 2:
+          methodToDo(req[0].lower(), req[1])
+        else:
+          print('❌ Invalid command format')
+        
+
+
+print("""
+ _______  _____   _____  _______ _____ _______ __   __ _______        _____
+ |______ |_____] |     |    |      |   |______   \_/   |       |        |  
+ ______| |       |_____|    |    __|__ |          |    |_____  |_____ __|__
+""")
+t = threading.Thread(target=listener_thread, daemon=True)
+t.start()
+isReady()
 
