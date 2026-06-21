@@ -14,14 +14,14 @@ def audioRec():
         mic = sr.Microphone()
         with mic as source:
             print("🎤 Listening...")
-            audio = r.listen(source)
+            audio = r.listen(source,timeout=5,phrase_time_limit=5)
             try:
                 inp = r.recognize_google(audio)
                 print(f"🗣️ Heard: {inp}")
                 lst_out = inp.split(" ", 1)
                 return lst_out if len(lst_out) > 0 else None
             except sr.UnknownValueError:
-                print("❌ Could not understand audio")
+                print("🪛 Noisy background unknown input.")
                 return None
             except sr.RequestError:
                 print("❌ Could not request results from speech recognition service")
