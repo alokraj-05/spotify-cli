@@ -67,16 +67,13 @@ class Playback:
   def _open_spotify_app_and_play(self, track_uri):
     """Try to open the desktop Spotify client and play the given spotify: URI."""
     try:
-      # Prefer OS-native open on Windows
       if os.name == 'nt':
         try:
-          os.startfile(track_uri)  # will open registered spotify: handler
+          os.startfile(track_uri)
         except Exception:
           webbrowser.open(track_uri)
       else:
         webbrowser.open(track_uri)
-
-      # Also attempt to launch the Spotify exe if present
       try:
         findNdLaunch("Spotify")
       except Exception:
@@ -97,7 +94,6 @@ class Playback:
     data = {"uris":[track_uri]}
 
     response = requests.put(self.play_url,headers=self.headers,json=data)
-    # Success
     if response.status_code == 204:
       return response
 
@@ -113,7 +109,6 @@ class Playback:
       print("⚠️ No active Spotify device found. Attempting to open native Spotify app and play directly...")
       opened = self._open_spotify_app_and_play(track_uri)
       if opened:
-        # give the app a moment to register as an active device
         time.sleep(3)
         response = requests.put(self.play_url,headers=self.headers,json=data)
         if response.status_code == 204:
@@ -229,3 +224,25 @@ class Playback:
       print(f"✅ New Playlist Created: '{new_playlist_name}' ({len(track_uris)} tracks)")
     else:
       print(f"❌ Error adding tracks: {response.status_code} {response.text}")
+
+  def get_current_playing(self):
+    url = f"{self.BASE_URL}me/player/currently-playing"
+    response = requests.get(url, headers=self.headers)
+
+    if response.status_code == 200:
+        data = response.json()
+
+        if data and data.get("item"):
+            track = data["item"]["name"]
+            artist = data["item"]["artists"][0]["name"]
+            progress = data["progress_ms"]
+            duration = data["item"]["duration_ms"]
+
+            return {
+                "track": track,
+                "artist": artist,
+                "progress": progress,
+                "duration": duration
+            }
+
+    return None
