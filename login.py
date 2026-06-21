@@ -30,7 +30,8 @@ def login():
     access_token = token_info["access_token"]
     sp =spotipy.Spotify(auth_manager=auth_manager)
     print("✅ Logged in successfully")
-    return access_token
+    return {
+      "access_token":access_token, "sp":sp}
   except Exception as e:
     print("Error retreving access token: ",str(e))
     return None

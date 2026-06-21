@@ -1,64 +1,55 @@
-import os
+import typer
 from login import login
-from spotipy import Spotify
 from dotenv import load_dotenv
-import click
 from Scripts.Artist import Artist
 from Scripts.Playback import Playback
+from Scripts.Playlist import Playlist
+from rich import print
+
 load_dotenv()
-access_token = login()
 
-artist = Artist(access_token)
-playback = Playback(access_token)
-    
+app = typer.Typer(
+    help="Spotify CLI - Control playback, playlists, and aritist"
+)
 
-@click.group()
-def main():
-    pass
+session = login()
+artist = Artist(session['access_token'])
+playback = Playback(session['access_token'])
+playlist = Playlist(session['access_token'],session['sp'])
 
 
-@click.command()
+@app.command()
 def authenticate():
     login()
 
-@click.command()
-@click.argument("artist_name")
-def artist_name(artist_name):
-    artist.artist_name(artist_name)
-
-
-@click.command()
-@click.argument("song_name")
+@app.command()
 def play(song_name):
     playback.play(song_name)
 
-
-@click.command()
-@click.argument("link")
-def play_playlist(link):
-    playback.play_playlist(link)
-
-@click.command()
+@app.command()
 def pause():
     playback.pause()
 
+@app.command()
+def artist_info(artist_name):
+    artist.artist_name(artist_name)
 
-@click.command(name="merge-playlist")
-@click.argument("playlist_name")
-@click.argument("playlist1_url")
-@click.argument("playlist2_url")
-def merge_playlist_command(playlist_name,playlist1_url,playlist2_url):
+@app.command()
+def add(*data: str):
+    playlist.add_songs(list(data))
+
+@app.command()
+def play_playlist(link:str):
+    playback.play_playlist(link)
+
+@app.command()
+def merge_playlist_command(playlist_name:str,playlist1_url:str,playlist2_url:str):
     playback.merge_playlist(playlist_name,playlist1_url,playlist2_url)
 
-
-
-main.add_command(authenticate)
-main.add_command(artist_name)
-main.add_command(play)
-main.add_command(play_playlist)
-main.add_command(pause)
-main.add_command(merge_playlist_command)
+@app.command()
+def get_playlists(name:str):
+    playlist.get_playlist_id(name)
 
 
 if __name__ == "__main__":
-    main()  
+    app()
