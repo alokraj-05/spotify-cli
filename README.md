@@ -1,5 +1,6 @@
 # Spotify CLI
 
+<img width="1274" height="695" alt="Spotify-cli" src="https://github.com/user-attachments/assets/a88b9e02-59e0-4344-9ae8-d4b1e6bc7dad" />
 > A tool to control your Spotify client via CLI commands, via calling function and providing parameters.
 
 **What's the purpose?**
@@ -31,7 +32,10 @@ git clone https://github.com/alokraj-05/spotify-cli.git
   ```shell
   pip install -r requirements.txt
   ```
+
   ```shell
   py main.py login
   py main.py --help
   ```
+  > Note: There is a lot of things to do, the current version i.e 1.1 can run via commands and voice actions which supports [play,pause,exit]: in voice and [play,pause,seek,next,merge-playlist,create-playlist,add-multiple-songs]: in command.
+  > Feel free to contribute 
